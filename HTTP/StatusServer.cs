@@ -59,6 +59,7 @@ public class StatusServer(TCPHandler tcp) {
             status = "online",
             timestamp = DateTime.UtcNow,
             totalRooms = tcp.GetTotalRooms(),
+            publicRooms = tcp.GetPublicRooms(),
             totalPeers = tcp.GetTotalPeers(),
             memoryUsageMB = memUsage,
             cpuUsagePercent = Math.Round(cpuUsage, 1)

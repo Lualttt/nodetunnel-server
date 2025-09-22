@@ -126,6 +126,10 @@ public class TCPHandler {
                 Console.WriteLine("Leave Room Request");
                 HandleLeaveRoom(client);
                 break;
+            case PacketType.RoomList:
+                Console.WriteLine("Received Room List");
+                HandleRoomList(client);
+                break;
             default:
                 Console.WriteLine($"Unknown Packet Type: {pktType}");
                 break;
@@ -157,7 +161,8 @@ public class TCPHandler {
     private async Task HandleHost(byte[] data, TcpClient client) {
         var oidLen = ByteUtils.UnpackU32(data, 0);
         var oid = Encoding.UTF8.GetString(data, 4, (int)oidLen);
-        var room = new Room(oid, client);
+        var flags = ByteUtils.UnpackU32(data, 4 + (int)oidLen);
+        var room = new Room(oid, client, (RoomFlags)flags);
         _rooms[oid] = room;
         
         Console.WriteLine($"Created Room For Peer: {oid}");
@@ -218,6 +223,11 @@ public class TCPHandler {
             _ = Task.Run(() => SendLeaveRoom(client));
         }
     }
+
+    private async Task HandleRoomList(TcpClient client)
+    {
+        await SendRoomList(client);
+    }
     
     /**
      * Sends an updated peer list to all clients in room
@@ -252,6 +262,23 @@ public class TCPHandler {
         await SendTcpMessage(client, msg.ToArray());
     }
 
+    private async Task SendRoomList(TcpClient client)
+    {
+        var rooms = GetPublicRooms();
+        
+        var msg = new List<byte>();
+        msg.AddRange(ByteUtils.PackU32((uint)PacketType.RoomList));
+        msg.AddRange(ByteUtils.PackU32((uint)rooms.Count));
+
+        foreach (var room in rooms)
+        {
+            msg.AddRange(ByteUtils.PackU32((uint)room.Length));
+            msg.AddRange(Encoding.UTF8.GetBytes(room));
+        }
+
+        await SendTcpMessage(client, msg.ToArray());
+    }
+
     /**
      * Gets the room that the given peer is in
      */
@@ -276,4 +303,19 @@ public class TCPHandler {
     public int GetTotalRooms() => _rooms.Count;
 
     public int GetTotalPeers() => _rooms.Values.Sum(room => room.GetPeers().Count);
+
+    public List<string> GetPublicRooms()
+    {
+        var publicRooms = new List<string>();
+        
+        foreach (var (id, room) in _rooms)
+        {
+            if ((room.Flags & RoomFlags.Unlisted) == 0)
+            {
+                publicRooms.Add(id);
+            }
+        }
+        
+        return publicRooms;
+    }
 }
