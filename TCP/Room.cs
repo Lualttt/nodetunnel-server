@@ -10,18 +10,20 @@ namespace NodeTunnel.TCP;
 public class Room {
     public string Id { get; }
     public string HostOid { get; private set; }
+    public string Name;
     public RoomFlags Flags;
 
     private readonly Dictionary<string, int> _oidToNid = new();
     public readonly Dictionary<string, TcpClient> Clients = new();
     private int _nextNid = 2; 
 
-    public Room(string id, TcpClient hostClient, RoomFlags flags) {
+    public Room(string id, TcpClient hostClient, string name, RoomFlags flags) {
         Id = id;
         _oidToNid[id] = 1;
         
         Clients[id] = hostClient;
 
+        Name = name;
         Flags = flags;
     }
 

@@ -161,8 +161,16 @@ public class TCPHandler {
     private async Task HandleHost(byte[] data, TcpClient client) {
         var oidLen = ByteUtils.UnpackU32(data, 0);
         var oid = Encoding.UTF8.GetString(data, 4, (int)oidLen);
-        var flags = ByteUtils.UnpackU32(data, 4 + (int)oidLen);
-        var room = new Room(oid, client, (RoomFlags)flags);
+        var offset = 4 + (int)oidLen;
+
+        var nameLen = ByteUtils.UnpackU32(data, offset);
+        var name = Encoding.UTF8.GetString(data, offset + 4, (int)nameLen);
+
+        offset = offset + 4 + (int)nameLen;
+        
+        var flags = ByteUtils.UnpackU32(data, offset);
+        
+        var room = new Room(oid, client, name, (RoomFlags)flags);
         _rooms[oid] = room;
         
         Console.WriteLine($"Created Room For Peer: {oid}");
@@ -270,10 +278,12 @@ public class TCPHandler {
         msg.AddRange(ByteUtils.PackU32((uint)PacketType.RoomList));
         msg.AddRange(ByteUtils.PackU32((uint)rooms.Count));
 
-        foreach (var room in rooms)
+        foreach (var (roomId, roomName) in rooms)
         {
-            msg.AddRange(ByteUtils.PackU32((uint)room.Length));
-            msg.AddRange(Encoding.UTF8.GetBytes(room));
+            msg.AddRange(ByteUtils.PackU32((uint)roomId.Length));
+            msg.AddRange(Encoding.UTF8.GetBytes(roomId));
+            msg.AddRange(ByteUtils.PackU32((uint)roomName.Length));
+            msg.AddRange(Encoding.UTF8.GetBytes(roomName));
         }
 
         await SendTcpMessage(client, msg.ToArray());
@@ -304,15 +314,15 @@ public class TCPHandler {
 
     public int GetTotalPeers() => _rooms.Values.Sum(room => room.GetPeers().Count);
 
-    public List<string> GetPublicRooms()
+    public Dictionary<string, string> GetPublicRooms()
     {
-        var publicRooms = new List<string>();
+        var publicRooms = new Dictionary<string, string>();
         
         foreach (var (id, room) in _rooms)
         {
             if ((room.Flags & RoomFlags.Unlisted) == 0)
             {
-                publicRooms.Add(id);
+                publicRooms.Add(id, room.Name);
             }
         }
         
