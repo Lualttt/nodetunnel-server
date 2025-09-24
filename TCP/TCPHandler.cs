@@ -278,12 +278,13 @@ public class TCPHandler {
         msg.AddRange(ByteUtils.PackU32((uint)PacketType.RoomList));
         msg.AddRange(ByteUtils.PackU32((uint)rooms.Count));
 
-        foreach (var (roomId, roomName) in rooms)
+        foreach (var (roomId, room) in rooms)
         {
             msg.AddRange(ByteUtils.PackU32((uint)roomId.Length));
             msg.AddRange(Encoding.UTF8.GetBytes(roomId));
-            msg.AddRange(ByteUtils.PackU32((uint)roomName.Length));
-            msg.AddRange(Encoding.UTF8.GetBytes(roomName));
+            msg.AddRange(ByteUtils.PackU32((uint)room.Name.Length));
+            msg.AddRange(Encoding.UTF8.GetBytes(room.Name));
+            msg.AddRange(ByteUtils.PackU32((uint)room.Flags));
         }
 
         await SendTcpMessage(client, msg.ToArray());
@@ -314,15 +315,15 @@ public class TCPHandler {
 
     public int GetTotalPeers() => _rooms.Values.Sum(room => room.GetPeers().Count);
 
-    public Dictionary<string, string> GetPublicRooms()
+    public Dictionary<string, Room> GetPublicRooms()
     {
-        var publicRooms = new Dictionary<string, string>();
+        var publicRooms = new Dictionary<string, Room>();
         
         foreach (var (id, room) in _rooms)
         {
             if ((room.Flags & RoomFlags.Unlisted) == 0)
             {
-                publicRooms.Add(id, room.Name);
+                publicRooms.Add(id, room);
             }
         }
         

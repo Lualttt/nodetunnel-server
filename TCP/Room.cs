@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace NodeTunnel.TCP;
 
@@ -8,10 +9,14 @@ namespace NodeTunnel.TCP;
  * Connected peers, host peer, etc.
  */
 public class Room {
+    [JsonPropertyName("id")]
     public string Id { get; }
+    [JsonIgnore]
     public string HostOid { get; private set; }
-    public string Name;
-    public RoomFlags Flags;
+    [JsonPropertyName("name")]
+    public string Name { get; }
+    [JsonPropertyName("flags")]
+    public RoomFlags Flags { get; }
 
     private readonly Dictionary<string, int> _oidToNid = new();
     public readonly Dictionary<string, TcpClient> Clients = new();
